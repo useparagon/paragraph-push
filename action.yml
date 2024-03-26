@@ -10,11 +10,11 @@ inputs:
   paragonZeusUrl:
     type: string
     required: false
-    default: https://zeus.useparagon.com
+    default: "https://zeus.useparagon.com"
   paragonDashboardUrl:
     type: string
     required: false
-    default: https://dashboard.useparagon.com
+    default: "https://dashboard.useparagon.com"
 
 runs:
   using: 'composite'
@@ -45,29 +45,27 @@ runs:
       id: validate
       shell: bash
       run: |
-        if [ "${{ steps.validateGitSync.outputs.projectId }}" = "null" ]; then
-          echo "projectId is not provided."
-          exit 1
-        fi
-          
-        if [ "${{ steps.validateGitSync.outputs.commitId }}" = "null" ]; then
-          echo "commitId is not provided."
-          exit 1
-        fi 
+        if [ "${{ steps.validateGitSync.outputs.projectId }}" = "null" ] || [ "${{ steps.validateGitSync.outputs.commitId }}" = "null" ]; then
+          echo "::warning::Branch \"${{ github.ref_name }}\" is not linked to any projects in Paragon.
+          See docs on setting up Git Sync for a branch: https://docs.useparagon.com/paragraph/setting-up-git-sync
 
-        if [ -z "${{ inputs.paragonKey }}" ]; then
-          echo "paragonKey is not provided."
-          exit 1
-        fi
+          Proceeding with a build-only run (no contents will be pushed to Paragon)..."
+          echo "valid=false" >> $GITHUB_OUTPUT
 
-        if [ -z "${{ inputs.paragonZeusUrl }}" ]; then
-          echo "paragonZeusUrl is not provided."
-          exit 1
-        fi 
+        elif [ -z "${{ inputs.paragonKey }}" ]; then
+          echo "::warning:: \"paragonKey\" is not provided."
+          echo "valid=false" >> $GITHUB_OUTPUT
 
-        if [ -z "${{ inputs.paragonDashboardUrl }}" ]; then
-          echo "paragonDashboardUrl is not provided."
-          exit 1
+        elif [ -z "${{ inputs.paragonZeusUrl }}" ]; then
+          echo "::warning:: \"paragonZeusUrl\" is not provided."
+          echo "valid=false" >> $GITHUB_OUTPUT 
+
+        elif [ -z "${{ inputs.paragonDashboardUrl }}" ]; then
+          echo "::warning:: \"paragonDashboardUrl\" is not provided."
+          echo "valid=false" >> $GITHUB_OUTPUT
+
+        else
+          echo "valid=true" >> $GITHUB_OUTPUT
         fi
 
     - name: Setup Node.js environment
@@ -117,7 +115,7 @@ runs:
 
     - name: Push to Paragon
       shell: bash
-      if: github.event_name == 'push'
+      if: github.event_name == 'push' && steps.validate.outputs.valid == 'true'
       run: para push
 
     # Post steps
@@ -128,7 +126,7 @@ runs:
         PARAGON_HOST_ZEUS: ${{ inputs.paragonZeusUrl }}
         PROJECT_ID: ${{ steps.validateGitSync.outputs.projectId }}
         COMMIT_ID: ${{ steps.validateGitSync.outputs.commitId }}
-      if: ${{ success() }}
+      if: success() && steps.validate.outputs.valid == 'true'
       run: |
         echo "Commit succeeded!"
         curl -X PATCH \
@@ -144,7 +142,7 @@ runs:
         PARAGON_HOST_ZEUS: ${{ inputs.paragonZeusUrl }}
         PROJECT_ID: ${{ steps.validateGitSync.outputs.projectId }}
         COMMIT_ID: ${{ steps.validateGitSync.outputs.commitId }}
-      if: ${{ failure() }}
+      if: failure() && steps.validate.outputs.valid == 'true'
       run: |
         echo "Commit failed!"
         curl -X PATCH \

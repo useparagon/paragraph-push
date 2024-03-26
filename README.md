@@ -31,14 +31,11 @@ jobs:
 Make sure to replace ${{ secrets.PARAGON_CLI_KEY }}, ${{ secrets.ZEUS_URL }}, and ${{ secrets.DASHBOARD_URL }} with your actual secrets. Also, ensure to use the correct version of the action.
 
 ## Inputs
-- paragonKey
-Required. Paragon CLI key for authentication.
+- `paragonKey` (Required)\
+Paragon CLI key for authentication.
 
-- npmToken
-Required. NPM token for package publishing.
+- `paragonZeusUrl` (Optional)\
+URL for Paragon Zeus.
 
-- paragonZeusUrl
-Required. URL for Paragon Zeus.
-
-- paragonDashboardUrl
-Required. URL for Paragon Dashboard.
+- `paragonDashboardUrl` (Optional)\
+URL for Paragon Dashboard.
