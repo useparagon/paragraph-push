@@ -15,6 +15,11 @@ inputs:
     type: string
     required: false
     default: "https://dashboard.useparagon.com"
+  path:
+    type: string
+    description: 'Specify base path to Paragraph project, relative to the working directory.'
+    required: false
+    default: "./"
 
 runs:
   using: 'composite'
@@ -73,7 +78,7 @@ runs:
       with:
         node-version: v18.17.1
 
-    - name: Install para CLI
+    - name: Install para CLI globally
       shell: bash
       run: |
         npm install -g @useparagon/cli
@@ -109,14 +114,16 @@ runs:
 
     - name: Build Paragraph project
       shell: bash
+      working-directory: ${{ inputs.path }}
       run: |
-        para install
-        para build
+        npx para install
+        npx para build
 
     - name: Push to Paragon
       shell: bash
+      working-directory: ${{ inputs.path }}
       if: github.event_name == 'push' && steps.validate.outputs.valid == 'true'
-      run: para push
+      run: npx para push
 
     # Post steps
     - name: Update success status in Paragon
